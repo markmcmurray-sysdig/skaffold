@@ -190,6 +190,31 @@ var testDeploySkipBuildDependenciesConfig = latest.LegacyHelmDeploy{
 	}},
 }
 
+var testDeploySkipBuildDependenciesOnUpgradeConfig = latest.LegacyHelmDeploy{
+	Releases: []latest.HelmRelease{{
+		Name:      "skaffold-helm",
+		ChartPath: "examples/test",
+		Overrides: schemautil.HelmOverrides{Values: map[string]interface{}{"foo": "bar"}},
+		SetValues: map[string]string{
+			"some.key": "somevalue",
+		},
+		SkipBuildDependenciesOnUpgrade: true,
+	}},
+}
+
+var testDeploySkipBuildDependenciesAndOnUpgradeConfig = latest.LegacyHelmDeploy{
+	Releases: []latest.HelmRelease{{
+		Name:      "skaffold-helm",
+		ChartPath: "examples/test",
+		Overrides: schemautil.HelmOverrides{Values: map[string]interface{}{"foo": "bar"}},
+		SetValues: map[string]string{
+			"some.key": "somevalue",
+		},
+		SkipBuildDependencies: true,
+		SkipBuildDependenciesOnUpgrade: true,
+	}},
+}
+
 var testDeployWithPackaged = latest.LegacyHelmDeploy{
 	Releases: []latest.HelmRelease{{
 		Name:      "skaffold-helm",
@@ -217,6 +242,23 @@ var testDeploySkipBuildDependencies = latest.LegacyHelmDeploy{
 		Name:                  "skaffold-helm",
 		ChartPath:             "stable/chartmuseum",
 		SkipBuildDependencies: true,
+	}},
+}
+
+var testDeploySkipBuildDependenciesOnUpgrade = latest.LegacyHelmDeploy{
+	Releases: []latest.HelmRelease{{
+		Name:                           "skaffold-helm",
+		ChartPath:                      "stable/chartmuseum",
+		SkipBuildDependenciesOnUpgrade: true,
+	}},
+}
+
+var testDeploySkipBuildDependenciesOnUpgradeRemote = latest.LegacyHelmDeploy{
+	Releases: []latest.HelmRelease{{
+		Name:                           "skaffold-helm-remote",
+		RemoteChart:                    "stable/chartmuseum",
+		Repo:                           "https://charts.helm.sh/stable",
+		SkipBuildDependenciesOnUpgrade: true,
 	}},
 }
 
@@ -641,6 +683,41 @@ func TestHelmDeploy(t *testing.T) {
 				AndRunWithOutput("helm --kube-context kubecontext get all skaffold-helm --template {{.Release.Manifest}} --kubeconfig kubeconfig", validDeployYaml),
 			helm:               testDeploySkipBuildDependencies,
 			builds:             testBuilds,
+			expectedNamespaces: []string{""},
+		},
+		{
+			description: "deploy success with skipBuildDependenciesOnUpgrade",
+			commands: testutil.
+				CmdRunWithOutput("helm version --client", version31).
+				AndRun("helm --kube-context kubecontext get all skaffold-helm --kubeconfig kubeconfig").
+				AndRunEnv("helm --kube-context kubecontext upgrade skaffold-helm examples/test --post-renderer SKAFFOLD-BINARY --set some.key=somevalue -f skaffold-overrides.yaml --kubeconfig kubeconfig",
+					[]string{"SKAFFOLD_FILENAME=test.yaml", "SKAFFOLD_CMDLINE=filter --kube-context kubecontext --build-artifacts TMPFILE --kubeconfig kubeconfig"}).
+				AndRunWithOutput("helm --kube-context kubecontext get all skaffold-helm --template {{.Release.Manifest}} --kubeconfig kubeconfig", validDeployYaml),
+			helm:               testDeploySkipBuildDependenciesOnUpgradeConfig,
+			builds:             testBuilds,
+			expectedNamespaces: []string{""},
+		},
+		{
+			description: "deploy success with skipBuildDependencies and skipBuildDependenciesOnUpgrade",
+			commands: testutil.
+				CmdRunWithOutput("helm version --client", version31).
+				AndRun("helm --kube-context kubecontext get all skaffold-helm --kubeconfig kubeconfig").
+				AndRunEnv("helm --kube-context kubecontext upgrade skaffold-helm examples/test --post-renderer SKAFFOLD-BINARY --set some.key=somevalue -f skaffold-overrides.yaml --kubeconfig kubeconfig",
+					[]string{"SKAFFOLD_FILENAME=test.yaml", "SKAFFOLD_CMDLINE=filter --kube-context kubecontext --build-artifacts TMPFILE --kubeconfig kubeconfig"}).
+				AndRunWithOutput("helm --kube-context kubecontext get all skaffold-helm --template {{.Release.Manifest}} --kubeconfig kubeconfig", validDeployYaml),
+			helm:               testDeploySkipBuildDependenciesAndOnUpgradeConfig,
+			builds:             testBuilds,
+			expectedNamespaces: []string{""},
+		},
+		{
+			description: "deploy success remote chart with skipBuildDependenciesOnUpgrade",
+			commands: testutil.
+				CmdRunWithOutput("helm version --client", version31).
+				AndRunErr("helm --kube-context kubecontext get all skaffold-helm-remote --kubeconfig kubeconfig", fmt.Errorf("Error: release: not found")).
+				AndRunEnv("helm --kube-context kubecontext install skaffold-helm-remote stable/chartmuseum --post-renderer SKAFFOLD-BINARY --repo https://charts.helm.sh/stable --kubeconfig kubeconfig",
+					[]string{"SKAFFOLD_FILENAME=test.yaml", "SKAFFOLD_CMDLINE=filter --kube-context kubecontext --kubeconfig kubeconfig"}).
+				AndRunWithOutput("helm --kube-context kubecontext get all skaffold-helm-remote --template {{.Release.Manifest}} --kubeconfig kubeconfig", validDeployYaml),
+			helm:               testDeploySkipBuildDependenciesOnUpgradeRemote,
 			expectedNamespaces: []string{""},
 		},
 		{
@@ -1313,6 +1390,14 @@ func TestHelmRender(t *testing.T) {
 			commands: testutil.
 				CmdRun("helm --kube-context kubecontext template skaffold-helm stable/chartmuseum --kubeconfig kubeconfig"),
 			helm: testDeploySkipBuildDependencies,
+		},
+		{
+			description: "render building chart dependencies as not upgrade",
+			shouldErr:   false,
+			commands: testutil.
+				CmdRun("helm --kube-context kubecontext dep build stable/chartmuseum --kubeconfig kubeconfig").
+				AndRun("helm --kube-context kubecontext template skaffold-helm stable/chartmuseum --kubeconfig kubeconfig"),
+			helm: testDeploySkipBuildDependenciesOnUpgrade,
 		},
 		// https://github.com/GoogleContainerTools/skaffold/issues/7595
 		// {

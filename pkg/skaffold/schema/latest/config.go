@@ -1038,6 +1038,10 @@ type HelmRelease struct {
 	// Ignored for `remoteChart`.
 	SkipBuildDependencies bool `yaml:"skipBuildDependencies,omitempty"`
 
+	// SkipBuildDependenciesOnUpgrade should build dependencies be skipped when running helm upgrade.
+	// Ignored for `remoteChart`.
+	SkipBuildDependenciesOnUpgrade bool `yaml:"skipBuildDependenciesOnUpgrade,omitempty"`
+
 	// SkipTests should ignore helm test during manifests generation.
 	// Defaults to `false`
 	SkipTests bool `yaml:"skipTests,omitempty"`

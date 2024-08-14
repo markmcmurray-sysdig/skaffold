@@ -490,7 +490,7 @@ func (h *Deployer) deployRelease(ctx context.Context, out io.Writer, releaseName
 	opts.postRenderer = skaffoldBinary
 
 	// Only build local dependencies, but allow a user to skip them.
-	if !r.SkipBuildDependencies && r.ChartPath != "" {
+	if !r.SkipBuildDependencies && !(r.SkipBuildDependenciesOnUpgrade && opts.upgrade) && r.ChartPath != "" {
 		olog.Entry(ctx).Info("Building helm dependencies...")
 
 		if err := helm.Exec(ctx, h, out, false, nil, "dep", "build", r.ChartPath); err != nil {
