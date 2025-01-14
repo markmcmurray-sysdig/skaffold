@@ -211,7 +211,7 @@ var testDeploySkipBuildDependenciesAndOnUpgradeConfig = latest.LegacyHelmDeploy{
 		SetValues: map[string]string{
 			"some.key": "somevalue",
 		},
-		SkipBuildDependencies: true,
+		SkipBuildDependencies:          true,
 		SkipBuildDependenciesOnUpgrade: true,
 	}},
 }
