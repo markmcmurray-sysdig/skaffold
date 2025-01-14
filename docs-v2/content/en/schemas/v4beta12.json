@@ -2427,6 +2427,12 @@
           "x-intellij-html-description": "should build dependencies be skipped. Ignored for <code>remoteChart</code>.",
           "default": "false"
         },
+        "skipBuildDependenciesOnUpgrade": {
+          "type": "boolean",
+          "description": "should build dependencies be skipped when running helm upgrade. Ignored for `remoteChart`.",
+          "x-intellij-html-description": "should build dependencies be skipped when running helm upgrade. Ignored for <code>remoteChart</code>.",
+          "default": "false"
+        },
         "skipTests": {
           "type": "boolean",
           "description": "should ignore helm test during manifests generation.",
@@ -2479,6 +2485,7 @@
         "wait",
         "recreatePods",
         "skipBuildDependencies",
+        "skipBuildDependenciesOnUpgrade",
         "skipTests",
         "useHelmSecrets",
         "repo",
